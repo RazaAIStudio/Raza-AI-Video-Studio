@@ -6,17 +6,21 @@ import android.graphics.Color;
 import android.view.*;
 import android.widget.*;
 import android.content.*;
-import android.speech.tts.TextToSpeech;
 import android.net.Uri;
-import java.util.Locale;
+import android.speech.tts.TextToSpeech;
+import java.util.*;
 
 public class MainActivity extends Activity {
 
     LinearLayout layout;
-    EditText prompt, voiceText, scriptText;
-    TextToSpeech tts;
+    EditText prompt;
     String ratio = "9:16";
-    Uri imageUri;
+    String qualityValue = "1080p";
+    Uri selectedImage;
+    TextToSpeech tts;
+
+    int bg = Color.rgb(15, 18, 30);
+    int accent = Color.rgb(0, 220, 180);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,201 +30,143 @@ public class MainActivity extends Activity {
 
         layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(25,30,25,30);
-        layout.setBackgroundColor(Color.rgb(18,18,25));
+        layout.setPadding(25, 30, 25, 30);
+        layout.setBackgroundColor(bg);
 
         scroll.addView(layout);
         setContentView(scroll);
 
-        tts = new TextToSpeech(this, status -> {
-            if(status == TextToSpeech.SUCCESS) {
-                tts.setLanguage(Locale.getDefault());
-            }
-        });
+        tts = new TextToSpeech(this, status -> {});
 
         title("RAZA AI VIDEO STUDIO");
+        heading("Create AI Videos");
 
         heading("VIDEO RATIO");
 
-        addButton("9:16");
-        addButton("16:9");
-        addButton("1:1");
+        LinearLayout ratios = new LinearLayout(this);
 
-        heading("TEXT TO VIDEO AI");
+        String[] ratioOptions = {"9:16", "16:9", "1:1"};
 
-        prompt = input("Describe your video...");
+        for (String r : ratioOptions) {
+            Button b = new Button(this);
+            b.setText(r);
+            ratios.addView(b);
 
-        action("Generate From Text", () ->
-            message("AI Video API connection required.")
-        );
-
-        heading("IMAGE TO VIDEO AI");
-
-        action("Select Image", () -> {
-            Intent i = new Intent(Intent.ACTION_GET_CONTENT);
-            i.setType("image/*");
-            startActivityForResult(i,101);
-        });
-
-        action("Generate From Image", () ->
-            message("AI Image-to-Video API required.")
-        );
-
-        heading("AI VOICE GENERATOR");
-
-        voiceText = input("Enter text for AI voice...");
-
-        action("Speak Text", () -> {
-            String text = voiceText.getText().toString();
-
-            if(!text.isEmpty()) {
-                tts.speak(text,
-                    TextToSpeech.QUEUE_FLUSH,
-                    null,
-                    "voice1");
-            } else {
-                message("Please enter text.");
-            }
-        });
-
-        action("Stop Voice", () -> {
-            tts.stop();
-        });
-
-        heading("AI SCRIPT GENERATOR");
-
-        scriptText = input("Enter your video topic...");
-
-        action("Generate Script", () -> {
-
-    String topic = scriptText.getText().toString().trim();
-
-    if(topic.isEmpty()) {
-        message("Enter video topic first.");
-        return;
-    }
-
-    scriptText.setEnabled(false);
-    message("Generating AI Script...");
-
-    new Thread(() -> {
-        try {
-            java.net.URL url = new java.net.URL(
-                "https://calm-river-5f10.ranzer1997.workers.dev"
-            );
-
-            java.net.HttpURLConnection conn =
-                (java.net.HttpURLConnection) url.openConnection();
-
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty(
-                "Content-Type", "application/json"
-            );
-            conn.setDoOutput(true);
-            conn.setConnectTimeout(20000);
-            conn.setReadTimeout(60000);
-
-            org.json.JSONObject body =
-                new org.json.JSONObject();
-
-            body.put("prompt",
-                "Write a detailed video script about: " + topic
-                + ". Include title, scenes, narration and ending."
-            );
-
-            try (java.io.OutputStream os =
-                conn.getOutputStream()) {
-
-                os.write(body.toString().getBytes("UTF-8"));
-            }
-
-            java.io.InputStream stream =
-                conn.getResponseCode() < 400
-                ? conn.getInputStream()
-                : conn.getErrorStream();
-
-            java.io.ByteArrayOutputStream buffer =
-                new java.io.ByteArrayOutputStream();
-
-            byte[] bytes = new byte[4096];
-            int count;
-
-            while ((count = stream.read(bytes)) != -1) {
-                buffer.write(bytes, 0, count);
-            }
-
-            stream.close();
-
-            org.json.JSONObject result =
-                new org.json.JSONObject(
-                    buffer.toString("UTF-8")
-                );
-
-            String generated =
-                result.optString("text", "");
-
-            runOnUiThread(() -> {
-                scriptText.setEnabled(true);
-
-                if(!generated.isEmpty()) {
-                    scriptText.setText(generated);
-                    message("AI Script Generated!");
-                } else {
-                    message(result.optString(
-                        "error", "Script generation failed"
-                    ));
-                }
-            });
-
-            conn.disconnect();
-
-        } catch(Exception e) {
-            runOnUiThread(() -> {
-                scriptText.setEnabled(true);
-                message("Error: " + e.getMessage());
+            b.setOnClickListener(v -> {
+                ratio = r;
+                message("Selected Ratio: " + ratio);
             });
         }
-    }).start();
-});
-            String result =
-                "TITLE: " + topic +
-                "\n\nINTRO:\nWelcome to our video!\n" +
-                "\nMAIN CONTENT:\n" +
-                "Today we are going to explore " + topic +
-                ". Stay with us to learn more.\n" +
-                "\nENDING:\nThanks for watching! Like, Share and Follow.";
 
-            scriptText.setText(result);
+        layout.addView(ratios);
+
+        heading("AI VIDEO PROMPT");
+
+        prompt = edit("Write your video idea here...");
+
+        action("GENERATE AI VIDEO", () ->
+            message("AI video generation service connection required.")
+        );
+
+        heading("IMAGE TO VIDEO");
+
+        action("SELECT IMAGE", () -> openImagePicker());
+
+        action("GENERATE FROM IMAGE", () -> {
+            if (selectedImage == null) {
+                message("Please select an image first");
+            } else {
+                message("AI image-to-video service connection required.");
+            }
         });
 
         heading("VIDEO QUALITY");
 
         Spinner quality = new Spinner(this);
 
-        String[] options = {
-            "720p", "1080p", "4K"
+        String[] qualities = {
+            "720p",
+            "1080p",
+            "4K"
         };
 
         ArrayAdapter<String> adapter =
             new ArrayAdapter<>(
                 this,
                 android.R.layout.simple_spinner_dropdown_item,
-                options
+                qualities
             );
 
         quality.setAdapter(adapter);
+
+        quality.setOnItemSelectedListener(
+            new android.widget.AdapterView.OnItemSelectedListener() {
+
+                @Override
+                public void onItemSelected(
+                    android.widget.AdapterView<?> parent,
+                    View view,
+                    int position,
+                    long id
+                ) {
+                    qualityValue = qualities[position];
+                }
+
+                @Override
+                public void onNothingSelected(
+                    android.widget.AdapterView<?> parent
+                ) {}
+            }
+        );
+
         layout.addView(quality);
+
+        heading("AI VOICE GENERATOR");
+
+        EditText voiceText = edit("Enter text for AI voice...");
+
+        action("PLAY VOICE", () -> {
+            String text = voiceText.getText().toString();
+
+            if (!text.isEmpty()) {
+                tts.speak(
+                    text,
+                    TextToSpeech.QUEUE_FLUSH,
+                    null,
+                    "voice"
+                );
+            } else {
+                message("Enter some text first");
+            }
+        });
+
+        heading("AI SCRIPT GENERATOR");
+
+        EditText scriptTopic = edit("Enter your video topic...");
+
+        action("GENERATE SCRIPT", () -> {
+            String topic = scriptTopic.getText().toString();
+
+            if (topic.isEmpty()) {
+                message("Enter video topic");
+            } else {
+                prompt.setText(
+                    "Create an engaging video about " + topic
+                );
+                message("Script idea added to video prompt");
+            }
+        });
 
         heading("BACKGROUND MUSIC");
 
         action("Music Feature - Coming Soon", () ->
-            message("Music feature will be added next.")
+            message("Background music feature coming soon")
         );
 
         heading("DOWNLOAD VIDEO");
 
         action("Download - Coming Soon", () ->
-            message("Video export feature will be added.")
+            message("Video download will be available after generation")
         );
     }
 
@@ -231,6 +177,7 @@ public class MainActivity extends Activity {
         t.setTextColor(Color.WHITE);
         t.setGravity(Gravity.CENTER);
         t.setPadding(0,10,0,30);
+        t.setTypeface(null, 1);
         layout.addView(t);
     }
 
@@ -238,16 +185,18 @@ public class MainActivity extends Activity {
         TextView t = new TextView(this);
         t.setText(text);
         t.setTextSize(19);
-        t.setTextColor(Color.rgb(0,220,180));
+        t.setTextColor(accent);
         t.setPadding(0,28,0,12);
+        t.setTypeface(null, 1);
         layout.addView(t);
     }
 
-    EditText input(String hint) {
+    EditText edit(String hint) {
         EditText e = new EditText(this);
         e.setHint(hint);
         e.setTextColor(Color.WHITE);
         e.setHintTextColor(Color.GRAY);
+        e.setPadding(15,12,15,12);
         layout.addView(e);
         return e;
     }
@@ -264,38 +213,47 @@ public class MainActivity extends Activity {
         b.setOnClickListener(v -> run.run());
     }
 
-    void addButton(String text) {
-        action(text, () -> {
-            ratio = text;
-            message("Selected Ratio: " + ratio);
-        });
+    void openImagePicker() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.setType("image/*");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+
+        startActivityForResult(intent, 101);
     }
 
     void message(String text) {
-        Toast.makeText(this,text,Toast.LENGTH_LONG).show();
+        Toast.makeText(
+            this,
+            text,
+            Toast.LENGTH_LONG
+        ).show();
     }
 
     @Override
     protected void onActivityResult(
-        int requestCode, int resultCode, Intent data) {
+        int requestCode,
+        int resultCode,
+        Intent data
+    ) {
+        super.onActivityResult(requestCode, resultCode, data);
 
-        super.onActivityResult(requestCode,resultCode,data);
+        if (requestCode == 101 &&
+            resultCode == RESULT_OK &&
+            data != null) {
 
-        if(requestCode == 101 &&
-           resultCode == RESULT_OK &&
-           data != null) {
+            selectedImage = data.getData();
 
-            imageUri = data.getData();
             message("Image Selected Successfully!");
         }
     }
 
     @Override
     protected void onDestroy() {
-        if(tts != null) {
+        if (tts != null) {
             tts.stop();
             tts.shutdown();
         }
+
         super.onDestroy();
     }
 }
