@@ -266,12 +266,16 @@ public class MainActivity extends Activity {
                     String name =
                         voice.getName().toLowerCase(Locale.ROOT);
 
-                    boolean match =
-                        gender.equals("Male")
-                        ? (name.contains("male") ||
-                           name.contains("man"))
-                        : (name.contains("female") ||
-                           name.contains("woman"));
+                    boolean match;
+
+if (gender.equals("Male")) {
+    match = (name.contains("male") &&
+             !name.contains("female")) ||
+             name.contains("man");
+} else {
+    match = name.contains("female") ||
+            name.contains("woman");
+}
 
                     if(match) {
                         tts.setVoice(voice);
