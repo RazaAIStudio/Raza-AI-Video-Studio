@@ -6,90 +6,168 @@ import android.graphics.Color;
 import android.view.*;
 import android.widget.*;
 import android.content.*;
+import android.speech.tts.TextToSpeech;
 import android.net.Uri;
+import java.util.Locale;
 
 public class MainActivity extends Activity {
 
     LinearLayout layout;
+    EditText prompt, voiceText, scriptText;
+    TextToSpeech tts;
     String ratio = "9:16";
+    Uri imageUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         ScrollView scroll = new ScrollView(this);
+
         layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(25, 30, 25, 30);
+        layout.setPadding(25,30,25,30);
         layout.setBackgroundColor(Color.rgb(18,18,25));
+
         scroll.addView(layout);
         setContentView(scroll);
 
-        TextView title = new TextView(this);
-        title.setText("RAZA AI VIDEO STUDIO");
-        title.setTextSize(25);
-        title.setTextColor(Color.WHITE);
-        title.setGravity(Gravity.CENTER);
-        layout.addView(title);
+        tts = new TextToSpeech(this, status -> {
+            if(status == TextToSpeech.SUCCESS) {
+                tts.setLanguage(Locale.getDefault());
+            }
+        });
 
-        addText("Select Video Ratio");
+        title("RAZA AI VIDEO STUDIO");
+
+        heading("VIDEO RATIO");
 
         addButton("9:16");
         addButton("16:9");
         addButton("1:1");
 
-        addText("Text To Video");
+        heading("TEXT TO VIDEO AI");
 
-        EditText prompt = new EditText(this);
-        prompt.setHint("Describe your video...");
-        prompt.setTextColor(Color.WHITE);
-        prompt.setHintTextColor(Color.GRAY);
-        layout.addView(prompt);
+        prompt = input("Describe your video...");
 
-        Button textGenerate = button("Generate From Text");
-        layout.addView(textGenerate);
+        action("Generate From Text", () ->
+            message("AI Video API connection required.")
+        );
 
-        addText("Image To Video");
+        heading("IMAGE TO VIDEO AI");
 
-        Button imageSelect = button("Select Image");
-        layout.addView(imageSelect);
+        action("Select Image", () -> {
+            Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+            i.setType("image/*");
+            startActivityForResult(i,101);
+        });
 
-        Button imageGenerate = button("Generate From Image");
-        layout.addView(imageGenerate);
+        action("Generate From Image", () ->
+            message("AI Image-to-Video API required.")
+        );
 
-        addText("Video Quality");
+        heading("AI VOICE GENERATOR");
+
+        voiceText = input("Enter text for AI voice...");
+
+        action("Speak Text", () -> {
+            String text = voiceText.getText().toString();
+
+            if(!text.isEmpty()) {
+                tts.speak(text,
+                    TextToSpeech.QUEUE_FLUSH,
+                    null,
+                    "voice1");
+            } else {
+                message("Please enter text.");
+            }
+        });
+
+        action("Stop Voice", () -> {
+            tts.stop();
+        });
+
+        heading("AI SCRIPT GENERATOR");
+
+        scriptText = input("Enter your video topic...");
+
+        action("Generate Script", () -> {
+
+            String topic = scriptText.getText().toString();
+
+            if(topic.isEmpty()) {
+                message("Enter video topic first.");
+                return;
+            }
+
+            String result =
+                "TITLE: " + topic +
+                "\n\nINTRO:\nWelcome to our video!\n" +
+                "\nMAIN CONTENT:\n" +
+                "Today we are going to explore " + topic +
+                ". Stay with us to learn more.\n" +
+                "\nENDING:\nThanks for watching! Like, Share and Follow.";
+
+            scriptText.setText(result);
+        });
+
+        heading("VIDEO QUALITY");
 
         Spinner quality = new Spinner(this);
-        String[] qualities = {"720p", "1080p", "4K"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(
-            this, android.R.layout.simple_spinner_dropdown_item, qualities);
+
+        String[] options = {
+            "720p", "1080p", "4K"
+        };
+
+        ArrayAdapter<String> adapter =
+            new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                options
+            );
+
         quality.setAdapter(adapter);
         layout.addView(quality);
 
-        textGenerate.setOnClickListener(v ->
-            Toast.makeText(this,
-            "AI service connection is required for generation.",
-            Toast.LENGTH_LONG).show());
+        heading("BACKGROUND MUSIC");
 
-        imageSelect.setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.setType("image/*");
-            startActivityForResult(intent, 101);
-        });
+        action("Music Feature - Coming Soon", () ->
+            message("Music feature will be added next.")
+        );
 
-        imageGenerate.setOnClickListener(v ->
-            Toast.makeText(this,
-            "AI service connection is required for generation.",
-            Toast.LENGTH_LONG).show());
+        heading("DOWNLOAD VIDEO");
+
+        action("Download - Coming Soon", () ->
+            message("Video export feature will be added.")
+        );
     }
 
-    void addText(String text) {
+    void title(String text) {
         TextView t = new TextView(this);
         t.setText(text);
-        t.setTextSize(18);
+        t.setTextSize(25);
         t.setTextColor(Color.WHITE);
-        t.setPadding(0, 30, 0, 12);
+        t.setGravity(Gravity.CENTER);
+        t.setPadding(0,10,0,30);
         layout.addView(t);
+    }
+
+    void heading(String text) {
+        TextView t = new TextView(this);
+        t.setText(text);
+        t.setTextSize(19);
+        t.setTextColor(Color.rgb(0,220,180));
+        t.setPadding(0,28,0,12);
+        layout.addView(t);
+    }
+
+    EditText input(String hint) {
+        EditText e = new EditText(this);
+        e.setHint(hint);
+        e.setTextColor(Color.WHITE);
+        e.setHintTextColor(Color.GRAY);
+        layout.addView(e);
+        return e;
     }
 
     Button button(String text) {
@@ -98,13 +176,44 @@ public class MainActivity extends Activity {
         return b;
     }
 
-    void addButton(String text) {
+    void action(String text, Runnable run) {
         Button b = button(text);
         layout.addView(b);
-        b.setOnClickListener(v -> {
+        b.setOnClickListener(v -> run.run());
+    }
+
+    void addButton(String text) {
+        action(text, () -> {
             ratio = text;
-            Toast.makeText(this,
-                "Selected: " + ratio, Toast.LENGTH_SHORT).show();
+            message("Selected Ratio: " + ratio);
         });
+    }
+
+    void message(String text) {
+        Toast.makeText(this,text,Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    protected void onActivityResult(
+        int requestCode, int resultCode, Intent data) {
+
+        super.onActivityResult(requestCode,resultCode,data);
+
+        if(requestCode == 101 &&
+           resultCode == RESULT_OK &&
+           data != null) {
+
+            imageUri = data.getData();
+            message("Image Selected Successfully!");
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if(tts != null) {
+            tts.stop();
+            tts.shutdown();
+        }
+        super.onDestroy();
     }
 }
