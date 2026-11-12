@@ -144,19 +144,43 @@ public class MainActivity extends Activity {
 
         EditText scriptTopic = edit("Enter your video topic...");
 
-        action("GENERATE SCRIPT", () -> {
-            String topic = scriptTopic.getText().toString();
+        
+action("GENERATE SCRIPT", () -> {
 
-            if (topic.isEmpty()) {
-                message("Enter video topic");
-            } else {
-                prompt.setText(
-                    "Create an engaging video about " + topic
-                );
-                message("Script idea added to video prompt");
-            }
-        });
+    String topic = scriptTopic.getText().toString().trim();
 
+    if (topic.isEmpty()) {
+        message("Please enter video topic");
+        return;
+    }
+
+    String script =
+        "TITLE: " + topic + "\n\n" +
+
+        "HOOK:\n" +
+        "Kya aap jaante hain " + topic +
+        " ke baare mein ek interesting baat?\n\n" +
+
+        "INTRO:\n" +
+        "Aaj hum baat karne wale hain " +
+        topic + " ke baare mein.\n\n" +
+
+        "MAIN CONTENT:\n" +
+        topic + " ek interesting topic hai. " +
+        "Iske baare mein jaanne ke liye video ko " +
+        "dhyan se dekhiye.\n\n" +
+
+        "ENDING:\n" +
+        "Agar aapko ye video pasand aayi ho " +
+        "to Like, Share aur Follow zaroor karein.\n\n" +
+
+        "SUBSCRIBE:\n" +
+        "Thanks for watching!";
+
+    prompt.setText(script);
+
+    message("Script Generated Successfully!");
+});
         heading("BACKGROUND MUSIC");
 
         action("Music Feature - Coming Soon", () ->
