@@ -1,87 +1,110 @@
 package com.raza.aivideostudio;
 
-import android.app.Activity;
-import android.content.Intent;
+import android.app.*;
+import android.os.*;
+import android.graphics.Color;
+import android.view.*;
+import android.widget.*;
+import android.content.*;
 import android.net.Uri;
-import android.os.Bundle;
-import android.view.Gravity;
-import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.TextView;
-import android.widget.VideoView;
 
 public class MainActivity extends Activity {
 
-    private static final int PICK_VIDEO = 101;
-    private VideoView videoView;
-    private TextView status;
-    private String selectedRatio = "9:16";
+    LinearLayout layout;
+    String ratio = "9:16";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        LinearLayout page = new LinearLayout(this);
-        page.setOrientation(LinearLayout.VERTICAL);
-        page.setPadding(24, 42, 24, 24);
-        page.setGravity(Gravity.CENTER);
-        page.setBackgroundColor(0xFF10131A);
+        ScrollView scroll = new ScrollView(this);
+        layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(25, 30, 25, 30);
+        layout.setBackgroundColor(Color.rgb(18,18,25));
+        scroll.addView(layout);
+        setContentView(scroll);
 
         TextView title = new TextView(this);
         title.setText("RAZA AI VIDEO STUDIO");
-        title.setTextColor(0xFFFFFFFF);
         title.setTextSize(25);
+        title.setTextColor(Color.WHITE);
         title.setGravity(Gravity.CENTER);
-        page.addView(title);
+        layout.addView(title);
 
-        TextView subtitle = new TextView(this);
-        subtitle.setText("Create Videos on Your Phone");
-        subtitle.setTextColor(0xFFFFFFFF);
-        page.addView(subtitle);
+        addText("Select Video Ratio");
 
-        LinearLayout ratios = new LinearLayout(this);
+        addButton("9:16");
+        addButton("16:9");
+        addButton("1:1");
 
-        for (String ratio : new String[]{"9:16", "16:9", "1:1"}) {
-            Button button = new Button(this);
-            button.setText(ratio);
-            button.setOnClickListener(v -> {
-                selectedRatio = ratio;
-                status.setText("Selected: " + ratio);
-            });
-            ratios.addView(button, new LinearLayout.LayoutParams(0, -2, 1));
-        }
+        addText("Text To Video");
 
-        page.addView(ratios);
+        EditText prompt = new EditText(this);
+        prompt.setHint("Describe your video...");
+        prompt.setTextColor(Color.WHITE);
+        prompt.setHintTextColor(Color.GRAY);
+        layout.addView(prompt);
 
-        Button choose = new Button(this);
-        choose.setText("SELECT VIDEO");
-        choose.setOnClickListener(v -> {
+        Button textGenerate = button("Generate From Text");
+        layout.addView(textGenerate);
+
+        addText("Image To Video");
+
+        Button imageSelect = button("Select Image");
+        layout.addView(imageSelect);
+
+        Button imageGenerate = button("Generate From Image");
+        layout.addView(imageGenerate);
+
+        addText("Video Quality");
+
+        Spinner quality = new Spinner(this);
+        String[] qualities = {"720p", "1080p", "4K"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+            this, android.R.layout.simple_spinner_dropdown_item, qualities);
+        quality.setAdapter(adapter);
+        layout.addView(quality);
+
+        textGenerate.setOnClickListener(v ->
+            Toast.makeText(this,
+            "AI service connection is required for generation.",
+            Toast.LENGTH_LONG).show());
+
+        imageSelect.setOnClickListener(v -> {
             Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.setType("video/*");
-            startActivityForResult(intent, PICK_VIDEO);
+            intent.setType("image/*");
+            startActivityForResult(intent, 101);
         });
-        page.addView(choose);
 
-        videoView = new VideoView(this);
-        page.addView(videoView, new LinearLayout.LayoutParams(-1, 0, 1));
-
-        status = new TextView(this);
-        status.setText("Ready | 9:16");
-        status.setTextColor(0xFFFFFFFF);
-        page.addView(status);
-
-        setContentView(page);
+        imageGenerate.setOnClickListener(v ->
+            Toast.makeText(this,
+            "AI service connection is required for generation.",
+            Toast.LENGTH_LONG).show());
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
+    void addText(String text) {
+        TextView t = new TextView(this);
+        t.setText(text);
+        t.setTextSize(18);
+        t.setTextColor(Color.WHITE);
+        t.setPadding(0, 30, 0, 12);
+        layout.addView(t);
+    }
 
-        if (requestCode == PICK_VIDEO && resultCode == RESULT_OK && data != null) {
-            Uri uri = data.getData();
-            videoView.setVideoURI(uri);
-            videoView.setOnPreparedListener(mp -> videoView.start());
-            status.setText("Video loaded | " + selectedRatio);
-        }
+    Button button(String text) {
+        Button b = new Button(this);
+        b.setText(text);
+        return b;
+    }
+
+    void addButton(String text) {
+        Button b = button(text);
+        layout.addView(b);
+        b.setOnClickListener(v -> {
+            ratio = text;
+            Toast.makeText(this,
+                "Selected: " + ratio, Toast.LENGTH_SHORT).show();
+        });
     }
 }
