@@ -121,25 +121,90 @@ public class MainActivity extends Activity {
 
         layout.addView(quality);
 
-        heading("AI VOICE GENERATOR");
+        
+heading("AI VOICE GENERATOR");
 
-        EditText voiceText = edit("Enter text for AI voice...");
+EditText voiceText = edit("Enter text for AI voice...");
 
-        action("PLAY VOICE", () -> {
-            String text = voiceText.getText().toString();
+heading("SELECT VOICE LANGUAGE");
 
-            if (!text.isEmpty()) {
-                tts.speak(
-                    text,
-                    TextToSpeech.QUEUE_FLUSH,
-                    null,
-                    "voice"
-                );
-            } else {
-                message("Enter some text first");
-            }
-        });
+Spinner languageSpinner = new Spinner(this);
 
+String[] languages = {
+    "Hindi",
+    "English"
+};
+
+ArrayAdapter<String> languageAdapter =
+    new ArrayAdapter<>(
+        this,
+        android.R.layout.simple_spinner_dropdown_item,
+        languages
+    );
+
+languageSpinner.setAdapter(languageAdapter);
+
+layout.addView(languageSpinner);
+
+heading("VOICE SPEED");
+
+SeekBar speedBar = new SeekBar(this);
+speedBar.setMax(15);
+speedBar.setProgress(5);
+
+layout.addView(speedBar);
+
+action("PLAY VOICE", () -> {
+
+    String text = voiceText.getText().toString().trim();
+
+    if (text.isEmpty()) {
+        message("Enter text first");
+        return;
+    }
+
+    if (tts == null) {
+        message("Voice engine loading");
+        return;
+    }
+
+    String language =
+        languageSpinner.getSelectedItem().toString();
+
+    Locale locale;
+
+    if (language.equals("Hindi")) {
+        locale = new Locale("hi", "IN");
+    } else {
+        locale = Locale.US;
+    }
+
+    int result = tts.setLanguage(locale);
+
+    if (result == TextToSpeech.LANG_MISSING_DATA ||
+        result == TextToSpeech.LANG_NOT_SUPPORTED) {
+
+        message("Selected language not supported");
+        return;
+    }
+
+    float speed = 0.5f + (speedBar.getProgress() * 0.1f);
+
+    tts.setSpeechRate(speed);
+
+    tts.speak(
+        text,
+        TextToSpeech.QUEUE_FLUSH,
+        null,
+        "raza_voice"
+    );
+});
+
+action("STOP VOICE", () -> {
+    if (tts != null) {
+        tts.stop();
+    }
+});
         heading("AI SCRIPT GENERATOR");
 
         EditText scriptTopic = edit("Enter your video topic...");
