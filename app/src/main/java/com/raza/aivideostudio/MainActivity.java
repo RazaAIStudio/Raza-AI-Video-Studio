@@ -93,13 +93,95 @@ public class MainActivity extends Activity {
 
         action("Generate Script", () -> {
 
-            String topic = scriptText.getText().toString();
+    String topic = scriptText.getText().toString().trim();
 
-            if(topic.isEmpty()) {
-                message("Enter video topic first.");
-                return;
+    if(topic.isEmpty()) {
+        message("Enter video topic first.");
+        return;
+    }
+
+    scriptText.setEnabled(false);
+    message("Generating AI Script...");
+
+    new Thread(() -> {
+        try {
+            java.net.URL url = new java.net.URL(
+                "https://calm-river-5f10.ranzer1997.workers.dev"
+            );
+
+            java.net.HttpURLConnection conn =
+                (java.net.HttpURLConnection) url.openConnection();
+
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty(
+                "Content-Type", "application/json"
+            );
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(20000);
+            conn.setReadTimeout(60000);
+
+            org.json.JSONObject body =
+                new org.json.JSONObject();
+
+            body.put("prompt",
+                "Write a detailed video script about: " + topic
+                + ". Include title, scenes, narration and ending."
+            );
+
+            try (java.io.OutputStream os =
+                conn.getOutputStream()) {
+
+                os.write(body.toString().getBytes("UTF-8"));
             }
 
+            java.io.InputStream stream =
+                conn.getResponseCode() < 400
+                ? conn.getInputStream()
+                : conn.getErrorStream();
+
+            java.io.ByteArrayOutputStream buffer =
+                new java.io.ByteArrayOutputStream();
+
+            byte[] bytes = new byte[4096];
+            int count;
+
+            while ((count = stream.read(bytes)) != -1) {
+                buffer.write(bytes, 0, count);
+            }
+
+            stream.close();
+
+            org.json.JSONObject result =
+                new org.json.JSONObject(
+                    buffer.toString("UTF-8")
+                );
+
+            String generated =
+                result.optString("text", "");
+
+            runOnUiThread(() -> {
+                scriptText.setEnabled(true);
+
+                if(!generated.isEmpty()) {
+                    scriptText.setText(generated);
+                    message("AI Script Generated!");
+                } else {
+                    message(result.optString(
+                        "error", "Script generation failed"
+                    ));
+                }
+            });
+
+            conn.disconnect();
+
+        } catch(Exception e) {
+            runOnUiThread(() -> {
+                scriptText.setEnabled(true);
+                message("Error: " + e.getMessage());
+            });
+        }
+    }).start();
+});
             String result =
                 "TITLE: " + topic +
                 "\n\nINTRO:\nWelcome to our video!\n" +
